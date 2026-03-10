@@ -295,12 +295,12 @@ memory:
 - [x] Tri-layer memory pyramid with Classical Chinese compression
 - [x] Dopamine-weighted emotional encoding
 - [x] Forgetting Transformer gate integration
-- [ ] A-MEM Zettelkasten graph (auto-linking)
-- [ ] SwiftMem sub-linear retrieval engine
-- [ ] MemGPT virtual context pager
-- [ ] Multi-agent shared memory protocol
-- [ ] Multimodal memory (image / audio anchors)
-- [ ] ReasoningBank strategy distillation
+- [x] A-MEM Zettelkasten graph (auto-linking)
+- [x] SwiftMem sub-linear retrieval engine
+- [x] MemGPT virtual context pager
+- [x] Multi-agent shared memory protocol
+- [x] Multimodal memory (image / audio anchors)
+- [x] ReasoningBank strategy distillation
 
 ---
 

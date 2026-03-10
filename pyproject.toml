@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "synaptex"
+version = "0.1.0"
+description = "SYNAPTEX·触链典: Synaptic Attention-Powered Token-EXtraction Engine — Biomimetic Memory with Multi-Language Compression"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Liu Su", email = "cosmos@synaptex.dev"},
+]
+keywords = [
+    "memory", "attention", "llm", "agent", "classical-chinese",
+    "token-compression", "zettelkasten", "forgetting-transformer",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/YourUsername/SYNAPTEX"
+Repository = "https://github.com/YourUsername/SYNAPTEX"
+Issues = "https://github.com/YourUsername/SYNAPTEX/issues"
