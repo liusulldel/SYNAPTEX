@@ -5,12 +5,12 @@ build-backend = "setuptools.backends._legacy:_Backend"
 [project]
 name = "synaptex"
 version = "0.1.0"
-description = "SYNAPTEX·触链典: Synaptic Attention-Powered Token-EXtraction Engine — Biomimetic Memory with Multi-Language Compression"
+description = "SYNAPTEX·触链�? Synaptic Attention-Powered Token-EXtraction Engine �?Biomimetic Memory with Multi-Language Compression"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [
-    {name = "Liu Su", email = "cosmos@synaptex.dev"},
+    {name = "Liu S", email = "cosmos@synaptex.dev"},
 ]
 keywords = [
     "memory", "attention", "llm", "agent", "classical-chinese",
