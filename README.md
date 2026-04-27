@@ -1,35 +1,35 @@
 # SYNAPTEX
 
-**Agentic memory toolkit for compact recall, shared context, and bounded context windows.**
+**Python toolkit for compact memory management in agent workflows.**
 
-SYNAPTEX is a lightweight Python toolkit for building agent memory: event capture, importance-weighted retrieval, graph associations, active-context paging, and auditable shared memory for multi-agent workflows.
+SYNAPTEX provides event capture, ranked retrieval, graph associations, active-context paging, and shared-memory coordination for Python systems.
 
-It is useful when an agent needs to remember prior observations, retrieve task-relevant events, keep prompt context compact, or share selected memories between planner, executor, and critic workers.
+Use it when a system needs to retain prior observations, retrieve relevant history, keep prompts within a token budget, or share selected state across components.
 
-## What SYNAPTEX Does
+## Overview
 
-The core loop is intentionally small:
+The core loop is small:
 
 1. Write an event with `encode(...)`.
 2. Retrieve relevant memories with `recall(...)`.
 3. Pull compact active context with `get_context()`.
 4. Run `night_mode()` for consolidation and decay passes.
 
-Each `MemoryUnit` keeps three representations:
+Each `MemoryUnit` stores three representations:
 
 | Layer | Purpose |
 | --- | --- |
-| `L1` | Compact summary for prompt injection |
+| `L1` | Compact summary for prompt use |
 | `L2` | Structured timeline entry for inspection |
-| `L3` | Raw verbatim content for archival recall |
+| `L3` | Raw content for archival recall |
 
-## Use Cases
+## Typical Uses
 
-- Long-horizon tool-use agents that need durable task memory.
-- Research assistants that must retrieve prior meetings, decisions, and constraints.
-- Multi-agent workflows where workers share public memory but retain private notes.
-- Context-window experiments that compare compact summaries against raw history.
-- Safety-oriented prototypes that need inspectable memory state and access logs.
+- Long-running agents that need durable task memory.
+- Assistants that retrieve prior meetings, decisions, and constraints.
+- Multi-component workflows with shared public memory and private notes.
+- Context-window experiments that compare summaries against raw history.
+- Systems that need inspectable memory state and access logs.
 
 ## Not A Vector Database
 
@@ -92,7 +92,7 @@ python examples/agentic_memory_demo.py
 
 | Object | Purpose |
 | --- | --- |
-| `SynaptexEngine` | Main orchestration class for encode, recall, context, and consolidation |
+| `SynaptexEngine` | Orchestration class for encode, recall, context, and consolidation |
 | `MemoryUnit` | Inspectable memory record with L1/L2/L3 content and metadata |
 | `ImportanceLabel` | Optional label used for importance weighting |
 | `AgentIdentity` | Agent identity and permissions for shared memory |
@@ -108,7 +108,7 @@ Common `SynaptexEngine` methods:
 | `get_active_memories()` | Inspect currently paged memories |
 | `forget(memory_id)` | Remove a memory from graph, retrieval, and active/archival context |
 | `register_agent(...)` | Register an agent for shared-memory writes |
-| `night_mode()` | Run decay/consolidation and prune forgotten memories |
+| `night_mode()` | Run decay and consolidation, then prune forgotten memories |
 | `get_stats()` | Inspect engine, graph, retriever, pager, and shared-memory state |
 
 ## Architecture
@@ -152,17 +152,13 @@ event text
 - CI runs compile checks, tests, and package build.
 - License metadata and repository license both use plain MIT.
 
-## Why This Repo Exists
+## Purpose
 
-SYNAPTEX explores a systems question behind long-horizon agents:
-
-**How can agents remember more, retrieve better, and expose inspectable control surfaces while spending fewer context tokens?**
-
-The current answer is a compact Python prototype for agent memory infrastructure: memory writing, indexed recall, graph associations, context-window management, shared-memory permissions, and consolidation/forgetting hooks.
+SYNAPTEX explores how systems can retain more useful state, retrieve it reliably, and expose inspectable control surfaces while staying within a bounded context window.
 
 ## Contributing
 
-Issues and thoughtful pull requests are welcome, especially around retrieval quality, persistence adapters, benchmarks, documentation clarity, and agent integration examples.
+Issues and pull requests are welcome, especially around retrieval quality, persistence adapters, benchmarks, documentation clarity, and integration examples.
 
 ## License
 
