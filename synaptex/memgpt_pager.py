@@ -1,62 +1,27 @@
-"""
-SYNAPTEX·触链典 — MemGPT Virtual Context Pager
-
-Inspired by MemGPT (Packer et al., 2023-2026):
-OS-inspired virtual memory management for LLM context windows.
-
-Treats the context window as RAM and archival storage as Disk:
-- Main Context (RAM): Active working memory within token budget
-- Archival Storage (Disk): Unlimited cold storage for historical memories
-- Page-in/Page-out: Agent-controlled memory swapping
-
-Breaks the physical context window limit by intelligently
-paging memories in and out based on relevance and priority.
-"""
+"""Active-context paging for SYNAPTEX memories."""
 
 from __future__ import annotations
+
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
 from datetime import datetime
+from typing import Dict, List, Optional
 
-from synaptex.types import MemoryUnit, ContextPage
+from synaptex.types import ContextPage, MemoryUnit
 
 
 @dataclass
 class PagingEvent:
     """Records a page-in or page-out event."""
-    event_type: str  # "page_in" or "page_out"
+
+    event_type: str
     page_id: str
     timestamp: datetime = field(default_factory=datetime.now)
     reason: str = ""
 
 
 class MemGPTPager:
-    """
-    Virtual Context Manager — OS-inspired memory paging.
-    
-    Architecture:
-    ┌────────────────────────────────┐
-    │  Main Context (RAM)            │  ← Active pages, within token budget
-    │  Token Budget: max_context_tokens│
-    ├────────────────────────────────┤
-    │  Warm Cache                    │  ← Recently evicted, fast re-load
-    ├────────────────────────────────┤
-    │  Archival Storage (Disk)       │  ← All memories, unlimited capacity
-    └────────────────────────────────┘
-    
-    Eviction Policy: LRU with priority boosting
-    - Pinned pages are never evicted
-    - High-dopamine pages get priority boost
-    - Least-recently-used pages evicted first
-    
-    Usage:
-        pager = MemGPTPager(max_context_tokens=4096)
-        pager.store(memory)  # Goes to archival
-        pager.page_in(memory.id)  # Loads into main context
-        
-        context = pager.get_active_context()  # What's currently in "RAM"
-    """
+    """Manage active memory pages under a token budget."""
 
     def __init__(
         self,
@@ -69,215 +34,176 @@ class MemGPTPager:
         self.warm_cache_size = warm_cache_size
         self.tokens_per_l1 = tokens_per_l1
         self.tokens_per_l2 = tokens_per_l2
-        
-        # Main Context (RAM) — OrderedDict for LRU tracking
         self.main_context: OrderedDict[str, ContextPage] = OrderedDict()
-        self.current_token_usage: int = 0
-        
-        # Warm Cache — recently evicted pages
+        self.current_token_usage = 0
         self.warm_cache: OrderedDict[str, ContextPage] = OrderedDict()
-        
-        # Archival Storage (Disk) — all memories
         self.archival: Dict[str, MemoryUnit] = {}
-        
-        # Pages mapping
         self.pages: Dict[str, ContextPage] = {}
-        
-        # Event log
         self.paging_history: List[PagingEvent] = []
 
+    def _estimate_text_tokens(self, text: str) -> int:
+        words = text.split()
+        if len(words) > 1:
+            return max(1, len(words))
+        return max(1, len(text) // 4)
+
     def _estimate_page_tokens(self, page: ContextPage) -> int:
-        """Estimate token cost of loading a page into context."""
         if page.token_count > 0:
             return page.token_count
-        
-        # Estimate based on number of memories and their layers
+
         total = 0
-        for mid in page.memory_ids:
-            if mid in self.archival:
-                mem = self.archival[mid]
-                # L1 is what we'd load into context
-                if mem.content_l1:
-                    total += len(mem.content_l1)
-                else:
-                    total += self.tokens_per_l1
-        
-        page.token_count = max(1, total)
+        for memory_id in page.memory_ids:
+            memory = self.archival.get(memory_id)
+            if not memory:
+                continue
+            total += self._estimate_text_tokens(memory.content_l1 or memory.content_l3)
+
+        page.token_count = max(1, total or self.tokens_per_l1)
         return page.token_count
 
+    def find_page_id(self, memory_id: str) -> Optional[str]:
+        for page_id, page in self.pages.items():
+            if memory_id in page.memory_ids:
+                return page_id
+        return None
+
     def store(self, memory: MemoryUnit) -> str:
-        """
-        Store a memory in archival storage. Creates a page wrapper.
-        Returns the page_id.
-        """
+        """Store a memory in archival storage and return its page ID."""
+
         self.archival[memory.id] = memory
-        
-        # Create a page for this memory
+        existing_page_id = self.find_page_id(memory.id)
+        if existing_page_id:
+            page = self.pages[existing_page_id]
+            page.summary = memory.content_l1 or memory.content_l3[:80]
+            page.priority = memory.dopamine_weight
+            page.token_count = 0
+            self._estimate_page_tokens(page)
+            return existing_page_id
+
         page = ContextPage(
             memory_ids=[memory.id],
-            summary=memory.content_l1 or memory.content_l3[:50],
+            summary=memory.content_l1 or memory.content_l3[:80],
             priority=memory.dopamine_weight,
             is_pinned=False,
         )
         self._estimate_page_tokens(page)
         self.pages[page.page_id] = page
-        
         return page.page_id
 
     def page_in(self, memory_id: str, reason: str = "") -> bool:
-        """
-        Load a memory from archival/warm cache into main context (RAM).
-        
-        If context is full, evicts LRU non-pinned pages first.
-        
-        Returns:
-            True if page-in succeeded, False if memory not found
-        """
+        """Load a memory into active context if it fits the token budget."""
+
         if memory_id not in self.archival:
             return False
-        
-        # Find the page containing this memory
-        target_page = None
-        for page in self.pages.values():
-            if memory_id in page.memory_ids:
-                target_page = page
-                break
-        
-        if not target_page:
+
+        page_id = self.find_page_id(memory_id)
+        if not page_id:
             return False
-        
-        # Already in main context?
-        if target_page.page_id in self.main_context:
-            # Move to end (most recently used)
-            self.main_context.move_to_end(target_page.page_id)
+
+        if page_id in self.main_context:
+            self.main_context.move_to_end(page_id)
             return True
-        
-        # Check warm cache first
-        if target_page.page_id in self.warm_cache:
-            self.warm_cache.pop(target_page.page_id)
-        
-        # Make room if needed
-        page_tokens = self._estimate_page_tokens(target_page)
-        while (
-            self.current_token_usage + page_tokens > self.max_tokens
-            and self.main_context
-        ):
+
+        page = self.pages[page_id]
+        self.warm_cache.pop(page_id, None)
+        page_tokens = self._estimate_page_tokens(page)
+        if page_tokens > self.max_tokens:
+            return False
+
+        while self.current_token_usage + page_tokens > self.max_tokens and self.main_context:
             self._evict_lru()
-        
-        # Page in
-        self.main_context[target_page.page_id] = target_page
+
+        if self.current_token_usage + page_tokens > self.max_tokens:
+            return False
+
+        self.main_context[page_id] = page
         self.current_token_usage += page_tokens
-        target_page.last_paged_in = datetime.now()
-        
-        # Update access stats
+        page.last_paged_in = datetime.now()
+
         memory = self.archival[memory_id]
         memory.access_count += 1
         memory.last_accessed = datetime.now()
-        
-        self.paging_history.append(PagingEvent(
-            event_type="page_in",
-            page_id=target_page.page_id,
-            reason=reason,
-        ))
-        
+
+        self.paging_history.append(PagingEvent("page_in", page_id, reason=reason))
         return True
 
-    def page_out(self, page_id: str, reason: str = ""):
-        """Evict a specific page from main context to warm cache."""
+    def page_out(self, page_id: str, reason: str = "") -> bool:
+        """Evict a page from active context into the warm cache."""
+
         if page_id not in self.main_context:
-            return
-        
+            return False
+
         page = self.main_context.pop(page_id)
-        self.current_token_usage -= self._estimate_page_tokens(page)
-        
-        # Move to warm cache
+        self.current_token_usage = max(0, self.current_token_usage - self._estimate_page_tokens(page))
+
         self.warm_cache[page_id] = page
         if len(self.warm_cache) > self.warm_cache_size:
-            self.warm_cache.popitem(last=False)  # Remove oldest
-        
-        self.paging_history.append(PagingEvent(
-            event_type="page_out",
-            page_id=page_id,
-            reason=reason,
-        ))
+            self.warm_cache.popitem(last=False)
 
-    def _evict_lru(self):
-        """Evict the least-recently-used non-pinned page."""
-        for page_id in list(self.main_context.keys()):
-            page = self.main_context[page_id]
+        self.paging_history.append(PagingEvent("page_out", page_id, reason=reason))
+        return True
+
+    def _evict_lru(self) -> None:
+        for page_id, page in list(self.main_context.items()):
             if not page.is_pinned:
-                self.page_out(page_id, reason="LRU eviction")
+                self.page_out(page_id, reason="lru_eviction")
                 return
-        
-        # If all pages are pinned, we can't evict
-        raise RuntimeError(
-            "Cannot evict: all pages are pinned. "
-            "Increase max_context_tokens or unpin some pages."
-        )
+        raise RuntimeError("Cannot evict context pages because all active pages are pinned.")
 
-    def pin(self, memory_id: str):
-        """Pin a memory's page so it's never evicted."""
-        for page in self.pages.values():
-            if memory_id in page.memory_ids:
-                page.is_pinned = True
-                return
+    def remove(self, memory_id: str, reason: str = "") -> bool:
+        """Remove a memory from archival, active context, warm cache, and pages."""
 
-    def unpin(self, memory_id: str):
-        """Unpin a memory's page, allowing eviction."""
-        for page in self.pages.values():
-            if memory_id in page.memory_ids:
-                page.is_pinned = False
-                return
+        removed = memory_id in self.archival
+        page_ids = [page_id for page_id, page in self.pages.items() if memory_id in page.memory_ids]
+
+        for page_id in page_ids:
+            self.page_out(page_id, reason=reason)
+            self.warm_cache.pop(page_id, None)
+            self.pages.pop(page_id, None)
+            removed = True
+
+        self.archival.pop(memory_id, None)
+        return removed
+
+    def pin(self, memory_id: str) -> bool:
+        page_id = self.find_page_id(memory_id)
+        if not page_id:
+            return False
+        self.pages[page_id].is_pinned = True
+        return True
+
+    def unpin(self, memory_id: str) -> bool:
+        page_id = self.find_page_id(memory_id)
+        if not page_id:
+            return False
+        self.pages[page_id].is_pinned = False
+        return True
 
     def get_active_context(self) -> List[MemoryUnit]:
-        """
-        Get all memories currently loaded in main context (RAM).
-        This is what would be injected into the LLM's context window.
-        """
-        active_memories = []
+        active_memories: List[MemoryUnit] = []
         for page in self.main_context.values():
-            for mid in page.memory_ids:
-                if mid in self.archival:
-                    active_memories.append(self.archival[mid])
+            for memory_id in page.memory_ids:
+                memory = self.archival.get(memory_id)
+                if memory:
+                    active_memories.append(memory)
         return active_memories
 
     def get_context_summary(self) -> str:
-        """
-        Generate a compressed summary of current context for injection.
-        Uses L1 (Classical Chinese) for maximum compression.
-        """
-        memories = self.get_active_context()
         summaries = []
-        for mem in memories:
-            if mem.content_l1:
-                summaries.append(mem.content_l1)
-            else:
-                summaries.append(mem.content_l3[:30] + "…")
-        
+        for memory in self.get_active_context():
+            summaries.append(memory.content_l1 or memory.content_l3[:80])
         return " | ".join(summaries)
 
-    def auto_page_in(
-        self,
-        query: str,
-        memories: List[MemoryUnit],
-        top_k: int = 5,
-    ):
-        """
-        Automatically page in the most relevant memories for a query.
-        Uses dopamine weight as a proxy for relevance.
-        """
-        # Sort by dopamine weight × recency
+    def auto_page_in(self, query: str, memories: List[MemoryUnit], top_k: int = 5) -> None:
         scored = sorted(
             memories,
-            key=lambda m: m.dopamine_weight * m.decay_score,
+            key=lambda memory: memory.dopamine_weight * memory.decay_score,
             reverse=True,
         )
-        
-        for mem in scored[:top_k]:
-            self.page_in(mem.id, reason=f"auto: query='{query[:30]}'")
+        for memory in scored[:top_k]:
+            self.page_in(memory.id, reason=f"auto: query='{query[:30]}'")
 
     def get_stats(self) -> Dict:
-        """Return paging statistics."""
         return {
             "context_tokens_used": self.current_token_usage,
             "context_tokens_max": self.max_tokens,
@@ -286,5 +212,5 @@ class MemGPTPager:
             "pages_in_warm_cache": len(self.warm_cache),
             "total_archival": len(self.archival),
             "total_paging_events": len(self.paging_history),
-            "pinned_pages": sum(1 for p in self.main_context.values() if p.is_pinned),
+            "pinned_pages": sum(1 for page in self.main_context.values() if page.is_pinned),
         }

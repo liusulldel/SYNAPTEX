@@ -1,40 +1,61 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "synaptex"
 version = "0.1.0"
-description = "Experimental agent memory library with tri-layer compression, retrieval, and context paging."
+description = "Agentic memory toolkit for compact recall, shared context, and bounded context windows."
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.9"
 authors = [
     {name = "Liu S", email = "cosmos@synaptex.dev"},
 ]
 keywords = [
+    "agentic-memory",
+    "agent-memory",
     "memory",
-    "attention",
-    "llm",
-    "agent",
-    "token-compression",
-    "zettelkasten",
+    "llm-agents",
+    "retrieval",
     "context-paging",
+    "context-management",
+    "multi-agent",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.2",
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "twine>=5.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/liusulldel/SYNAPTEX"
 Repository = "https://github.com/liusulldel/SYNAPTEX"
 Issues = "https://github.com/liusulldel/SYNAPTEX/issues"
+
+[tool.setuptools.packages.find]
+include = ["synaptex*"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"

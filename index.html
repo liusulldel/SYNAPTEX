@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="SYNAPTEX is a compact agentic memory toolkit for Python agents."
+  >
+  <title>SYNAPTEX | Memory for Agents</title>
+  <style>
+    :root {
+      --paper: #f7f1e7;
+      --ink: #17130e;
+      --muted: #5f574f;
+      --line: #d9cdbd;
+      --green: #2e5f50;
+      --glow: rgba(46, 95, 80, 0.14);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      background:
+        radial-gradient(circle at 78% 20%, var(--glow), transparent 26rem),
+        linear-gradient(135deg, var(--paper), #efe7da);
+    }
+
+    body::before {
+      position: fixed;
+      inset: 14vh 9vw auto auto;
+      width: min(30vw, 25rem);
+      aspect-ratio: 1;
+      content: "";
+      border: 1px solid rgba(46, 95, 80, 0.18);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .page {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100svh;
+      padding: clamp(1.5rem, 4vw, 4.5rem);
+    }
+
+    header,
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    nav,
+    footer {
+      align-items: center;
+    }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: clamp(1rem, 3vw, 2rem);
+    }
+
+    a {
+      border-bottom: 1px solid transparent;
+      transition: border-color 180ms ease, color 180ms ease;
+    }
+
+    a:hover,
+    a:focus-visible {
+      color: var(--ink);
+      border-color: currentColor;
+      outline: 2px solid rgba(46, 95, 80, 0.34);
+      outline-offset: 0.32rem;
+    }
+
+    main {
+      display: grid;
+      align-content: center;
+      width: min(100%, 70rem);
+      margin: 0 auto;
+      padding: clamp(9rem, 20vh, 15rem) 0;
+    }
+
+    .rule {
+      width: 2.5rem;
+      height: 1px;
+      margin-bottom: clamp(3rem, 7vw, 6rem);
+      background: var(--green);
+    }
+
+    .kicker {
+      margin: 0 0 clamp(1.5rem, 4vw, 3rem);
+      color: var(--muted);
+      font-size: 0.82rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 9ch;
+      margin: 0;
+      font-size: clamp(4.5rem, 16vw, 13rem);
+      font-weight: 400;
+      letter-spacing: -0.085em;
+      line-height: 0.78;
+      text-wrap: balance;
+    }
+
+    .lede {
+      max-width: 32rem;
+      margin: clamp(2rem, 5vw, 4rem) 0 0;
+      color: var(--muted);
+      font-size: clamp(1.2rem, 2.2vw, 2rem);
+      line-height: 1.35;
+    }
+
+    .page > * {
+      animation: reveal 650ms ease both;
+    }
+
+    main {
+      animation-delay: 90ms;
+    }
+
+    footer {
+      animation-delay: 160ms;
+    }
+
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: translateY(0.7rem);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 680px) {
+      header,
+      footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      main {
+        padding: 7rem 0 5rem;
+      }
+
+      h1 {
+        font-size: clamp(4.2rem, 25vw, 7rem);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a href="README.md">SYNAPTEX</a>
+      <nav aria-label="Primary navigation">
+        <a href="README.md">Docs</a>
+        <a href="https://github.com/liusulldel/SYNAPTEX">Source</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="rule" aria-hidden="true"></div>
+      <p class="kicker">Agentic memory toolkit</p>
+      <h1>Memory for agents.</h1>
+      <p class="lede">Compact recall, active context, and shared memory for Python agents.</p>
+    </main>
+
+    <footer>
+      <a href="examples/agentic_memory_demo.py">Example</a>
+      <a href="LICENSE">MIT</a>
+    </footer>
+  </div>
+</body>
+</html>
